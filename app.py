@@ -5,20 +5,6 @@ import random
 # --- CONFIGURATION & DATA LOADING ---
 st.set_page_config(page_title="Music Quiz Pro", page_icon="🎵")
 
-I've refined the logic to ensure that once you click "Check Answer", the app displays a clear validation message.
-
-In this version, I added a "Result" section that appears immediately after the click. It uses Streamlit's st.success and st.error components to show you if you were right, while also highlighting the correct answer in case you missed it.
-
-Modified Streamlit Code (with Result Validation)
-Python
-
-import streamlit as st
-import pandas as pd
-import random
-
-# --- CONFIGURATION & DATA LOADING ---
-st.set_page_config(page_title="Music Quiz Pro", page_icon="🎵")
-
 @st.cache_data
 def load_data(file_path):
     try:
