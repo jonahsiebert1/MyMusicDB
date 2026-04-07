@@ -5,6 +5,20 @@ import random
 # --- CONFIGURATION & DATA LOADING ---
 st.set_page_config(page_title="Music Quiz Pro", page_icon="🎵")
 
+I've refined the logic to ensure that once you click "Check Answer", the app displays a clear validation message.
+
+In this version, I added a "Result" section that appears immediately after the click. It uses Streamlit's st.success and st.error components to show you if you were right, while also highlighting the correct answer in case you missed it.
+
+Modified Streamlit Code (with Result Validation)
+Python
+
+import streamlit as st
+import pandas as pd
+import random
+
+# --- CONFIGURATION & DATA LOADING ---
+st.set_page_config(page_title="Music Quiz Pro", page_icon="🎵")
+
 @st.cache_data
 def load_data(file_path):
     try:
@@ -28,6 +42,8 @@ if 'answered' not in st.session_state:
     st.session_state.answered = False
 if 'options' not in st.session_state:
     st.session_state.options = []
+if 'user_choice' not in st.session_state:
+    st.session_state.user_choice = None
 
 # --- QUIZ LOGIC ---
 def get_new_question():
@@ -43,23 +59,17 @@ def get_new_question():
             q_text = f"Who is the artist/composer of the track: **'{row['title']}'**?"
             if dup_titles:
                 q_text += f"\n\n*(Clue: This version is from the album '{row['album']}')*"
-            
             correct_answer = row['primary_artist']
-            # Get 3 other unique random artists as distractors
             distractors = data[data['primary_artist'] != correct_answer]['primary_artist'].unique().tolist()
-            wrong_choices = random.sample(distractors, min(3, len(distractors)))
-            
         else: # Artist -> Title
             q_text = f"Which of these tracks was created by: **'{row['primary_artist']}'**?"
             if dup_artists:
                 q_text += f"\n\n*(Clue: The vibe is {row['feelings']})*"
-            
             correct_answer = row['title']
-            # Get 3 other unique random titles as distractors
             distractors = data[data['title'] != correct_answer]['title'].unique().tolist()
-            wrong_choices = random.sample(distractors, min(3, len(distractors)))
 
-        # Mix the choices
+        # Mix choices
+        wrong_choices = random.sample(distractors, min(3, len(distractors)))
         all_options = wrong_choices + [correct_answer]
         random.shuffle(all_options)
 
@@ -70,6 +80,7 @@ def get_new_question():
         }
         st.session_state.options = all_options
         st.session_state.answered = False
+        st.session_state.user_choice = None
 
 # --- UI LAYOUT ---
 st.title("🎵 Multiple Choice Music Quiz")
@@ -83,38 +94,43 @@ if data is not None:
     st.sidebar.metric("Total Score", st.session_state.score)
     if st.sidebar.button("Reset Score"):
         st.session_state.score = 0
+        get_new_question()
         st.rerun()
     
     with st.container(border=True):
         st.markdown(f"### {q['question']}")
         
-        # Use a radio or selectbox for "Checking" only
-        # We disable the radio once an answer is submitted
-        user_choice = st.radio(
+        # Display selection
+        # We store selection in session state so it persists after clicking the check button
+        selection = st.radio(
             "Select the correct option:",
             options=st.session_state.options,
-            index=None,
-            disabled=st.session_state.answered
+            index=None if st.session_state.user_choice is None else st.session_state.options.index(st.session_state.user_choice),
+            disabled=st.session_state.answered,
+            key="quiz_radio"
         )
         
         if not st.session_state.answered:
             if st.button("Check Answer"):
-                if user_choice is None:
+                if selection is None:
                     st.warning("Please select an option first!")
                 else:
+                    st.session_state.user_choice = selection
                     st.session_state.answered = True
-                    if user_choice == q['answer']:
-                        st.success(f"✅ Correct! It is {q['answer']}.")
+                    if selection == q['answer']:
                         st.session_state.score += 1
-                    else:
-                        st.error(f"❌ Wrong. The correct answer was: {q['answer']}")
-                    st.rerun() # Refresh to show results and Next button
+                    st.rerun()
 
-    # Navigation
-    if st.session_state.answered:
-        if st.button("Next Question ➡️"):
-            get_new_question()
-            st.rerun()
+        # RESULT AREA: Only shows after 'Check Answer' is clicked
+        if st.session_state.answered:
+            if st.session_state.user_choice == q['answer']:
+                st.success(f"✨ **Correct!** It was indeed '{q['answer']}'.")
+            else:
+                st.error(f"❌ **Not quite.** You chose '{st.session_state.user_choice}', but the correct answer was **'{q['answer']}'**.")
+            
+            if st.button("Next Question ➡️"):
+                get_new_question()
+                st.rerun()
             
     # Metadata Expanders
     with st.expander("Show Track Details"):
