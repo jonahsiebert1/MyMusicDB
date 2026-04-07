@@ -16,7 +16,7 @@ def load_data(file_path):
         return None
 
 # Assuming your file is named 'music_data.csv' in the same folder
-data = load_data('music_data.csv')
+data = load_data('musicDB.csv')
 
 # --- SESSION STATE ---
 if 'score' not in st.session_state:
